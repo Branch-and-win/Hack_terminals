@@ -5,7 +5,22 @@ from math import *
 
 
 
-
+Weights = {
+	1:20,
+	2:13,
+	3:12,
+	4:11,
+	5:10,
+	6:9,
+	7:8,
+	8:7,
+	9:6,
+	10:5,
+	11:4,
+	12:3,
+	13:2,
+	14:1
+}
 
 
 
@@ -60,7 +75,7 @@ def create_model(data, params, current_date, cars_count):
 	## Целевая функция:
 
 	model.obj = Objective(expr = (
-		sum(model.terminal_visits[t] * 14 / DaysLeft[t] for t in TERMINALS if DaysLeft[t] > 0)
+		sum(model.terminal_visits[t] * Weights[DaysLeft[t]] for t in TERMINALS if DaysLeft[t] > 0)
 	), sense = maximize)
 
 	return model

@@ -1,16 +1,17 @@
 import pandas as pd 
 from datetime import timedelta,datetime
 from pyomo.environ import *
+import pickle5 as pickle
 
-def create_data(params):
+def create_data(params, forecast_mode):
 
 	data = {}
 
 	TERMINALS = pd.read_excel(
-		'input/terminal_data_hackathon v4.xlsx',sheet_name='TIDS')['TID'].tolist()
+		'../input/terminal_data_hackathon v4.xlsx',sheet_name='TIDS')['TID'].tolist()
 	
 	edge_data = pd.read_csv(
-		'input/times v4.csv', index_col=['Origin_tid','Destination_tid'])
+		'../input/times v4.csv', index_col=['Origin_tid','Destination_tid'])
 	data['EDGES'] = list(edge_data.index.values)
 	data['EdgeTime'] = edge_data['Total_Time'].to_dict()
 	for (t1,t2) in data['EDGES']:
@@ -18,7 +19,7 @@ def create_data(params):
 			data['EdgeTime'][t1,t2] = 0.1
 
 	income_data = pd.read_excel(
-		'input/terminal_data_hackathon v4.xlsx',parse_dates=True,sheet_name='Incomes')
+		'../input/terminal_data_hackathon v4.xlsx',parse_dates=True,sheet_name='Incomes')
 
 	income_data['Datetime'] = pd.to_datetime(income_data['Date'])
 	CashIncome = {}
@@ -28,10 +29,14 @@ def create_data(params):
 	data['cash_income'] = CashIncome
 
 	balance_data = pd.read_excel(
-		'input/terminal_data_hackathon v4.xlsx',sheet_name='Start_balance', index_col=[0])
+		'../input/terminal_data_hackathon v4.xlsx',sheet_name='Start_balance', index_col=[0])
 	StartBalance = balance_data['start_balance'].to_dict()
 	data['start_balance'] = StartBalance
 
+	with open('../input/prognosis_full.pickle', 'rb') as fp:
+		forecast_income = pickle.load(fp)
+
+	data['forecast_income'] = forecast_income
 
 	DaysLeft = {t: params['max_days'] for t in TERMINALS}
 	RunningBalance = {}
@@ -41,11 +46,18 @@ def create_data(params):
 			DaysLeft[t] = 0
 		else:
 			for d in pd.date_range(start=params['start_date'], periods=params['max_days']).tolist():
-				if RunningBalance[t] + CashIncome[t,d] >= params['max_cash']:
-					DaysLeft[t] = (d - params['start_date']).days + 1
-					break
-				else:
-					RunningBalance[t] += CashIncome[t,d]
+				if forecast_mode:
+					if RunningBalance[t] + forecast_income[t][(params['start_date']+ timedelta(days=-1)).strftime("%Y-%m-%d %H:%M:%S")][d.strftime("%Y-%m-%d %H:%M:%S")] >= params['max_cash']:
+						DaysLeft[t] = (d - params['start_date']).days + 1
+						break
+					else:
+						RunningBalance[t] += forecast_income[t][(params['start_date']+ timedelta(days=-1)).strftime("%Y-%m-%d %H:%M:%S")][d.strftime("%Y-%m-%d %H:%M:%S")]	
+				else:				
+					if RunningBalance[t] + CashIncome[t,d] >= params['max_cash']:
+						DaysLeft[t] = (d - params['start_date']).days + 1
+						break
+					else:
+						RunningBalance[t] += CashIncome[t,d]
 
 	data['last_visit'] = {t: 
 		params['start_date'] + timedelta(days=-1)
@@ -56,13 +68,14 @@ def create_data(params):
 
 	return data
 
-def update_data(data, model, current_date, params):
+def update_data(data, model, current_date, params, forecast_mode):
 
 	StartBalance = data['start_balance']
 	CashIncome = data['cash_income']
 	TERMINALS = data['TERMINALS']
 	DaysLeft = data['days_left']
 	LastVisit = data['last_visit']
+	forecast_income = data['forecast_income']
 
 
 	RunningBalance = {}
@@ -79,11 +92,18 @@ def update_data(data, model, current_date, params):
 			DaysLeft[t] = 0
 		else:
 			for d in pd.date_range(start=current_date + timedelta(days=1), periods=params['max_days'] + 1).tolist():
-				if RunningBalance[t] + CashIncome[t,d] >= params['max_cash']:
-					DaysLeft[t] = min(DaysLeft[t], (d - current_date).days)
-					break
+				if forecast_mode:
+					if RunningBalance[t] + forecast_income[t][(current_date).strftime("%Y-%m-%d %H:%M:%S")][d.strftime("%Y-%m-%d %H:%M:%S")] >= params['max_cash']:
+						DaysLeft[t] = min(DaysLeft[t], (d - current_date).days)
+						break
+					else:
+						RunningBalance[t] += forecast_income[t][(current_date).strftime("%Y-%m-%d %H:%M:%S")][d.strftime("%Y-%m-%d %H:%M:%S")]
 				else:
-					RunningBalance[t] += CashIncome[t,d]
+					if RunningBalance[t] + CashIncome[t,d] >= params['max_cash']:
+						DaysLeft[t] = min(DaysLeft[t], (d - current_date).days)
+						break
+					else:
+						RunningBalance[t] += CashIncome[t,d]
 
 
 	data['start_balance'] = StartBalance
