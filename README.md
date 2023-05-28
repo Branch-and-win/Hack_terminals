@@ -86,7 +86,7 @@
  
 ### Запуск решения
 1. Настроить ``params.yaml`` - основные настройки работы системы;
-2. Обновить данные в ``./input/terminal_data_hackathon v4.xlsx`` (лист ``TIDS`` и ``Incomes``)
+2. Обновить данные в ``./input/terminal_data_hackathon v4.xlsx`` (лист ``TIDS`` и ``Incomes``);
 4. Запустить код с помощью 
 ```bash 
 python main.py
