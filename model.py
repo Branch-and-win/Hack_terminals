@@ -4,7 +4,6 @@ from datetime import timedelta
 from math import *
 
 
-
 Weights = {
 	1:20,
 	2:13,
@@ -21,9 +20,6 @@ Weights = {
 	13:2,
 	14:1
 }
-
-
-
 
 def create_model(data, params, current_date, cars_count):
 
