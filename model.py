@@ -69,7 +69,7 @@ def create_model(data, params, current_date, cars_count):
     constraints_from_dict(cons_min_visits, model, 'cons_min_visits')    
     constraints_from_dict(cons_max_visits, model, 'cons_max_visits')    
 
-     # Constraint to limit the number of routes per day to the number of available cars
+    # Constraint to limit the number of routes per day to the number of available cars
     cons_max_routes = {}
     cons_max_routes['cars_count'] = (
         cars_count >= sum(model.route_use[r] for r in routes)
