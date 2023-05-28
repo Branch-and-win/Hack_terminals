@@ -4,75 +4,82 @@ from datetime import timedelta
 from math import *
 
 
-Weights = {
-	1:20,
-	2:13,
-	3:12,
-	4:11,
-	5:10,
-	6:9,
-	7:8,
-	8:7,
-	9:6,
-	10:5,
-	11:4,
-	12:3,
-	13:2,
-	14:1
+WEIGHTS = {
+    1:20,
+    2:13,
+    3:12,
+    4:11,
+    5:10,
+    6:9,
+    7:8,
+    8:7,
+    9:6,
+    10:5,
+    11:4,
+    12:3,
+    13:2,
+    14:1
 }
 
 def create_model(data, params, current_date, cars_count):
+    """
+    Create the optimization model.
 
-	## Входные данные
+    Args:
+        data (dict): Dictionary containing the input data.
+        params (dict): Parameters for the optimization model.
+        current_date (datetime): Current date.
+        cars_count (int): Number of available cars.
 
-	TERMINALS = data['TERMINALS']
-	StartBalance = data['start_balance']
-	CashIncome = data['cash_income']
-	ROUTES = data['ROUTES']
-	TerminalsInRoute = data['terminals_in_route']
-	LastVisit = data['last_visit']
-	DaysLeft = data['days_left']
+    Returns:
+        model: Optimization model.
+    """
 
+    terminals = data['terminals']
+    start_balance = data['start_balance']
+    cash_income = data['cash_income']
+    routes = data['routes']
+    terminals_in_route = data['terminals_in_route']
+    last_visit = data['last_visit']
+    days_left = data['days_left']
 
-	## Оптимизационная модель
-	model = ConcreteModel()
+    model = ConcreteModel()
 
-	# Индикатор использования маршрута
-	model.route_use = Var(ROUTES, domain=Binary, initialize=0)
+    # Decision variable: Indicator of route using
+    model.route_use = Var(routes, domain=Binary, initialize=0)
 
-	# Количество посещений терминала 
-	model.terminal_visits = {(t):
-		sum(model.route_use[r] for r in ROUTES if t in TerminalsInRoute[r])
-		for t in TERMINALS
-	}
+    # Implicit variable: Number of visits to each terminal
+    model.terminal_visits = {(t):
+        sum(model.route_use[r] for r in routes if t in terminals_in_route[r])
+        for t in terminals
+    }
 
-	consMinVisits = {}
-	consMaxVisits = {}
-	for t in TERMINALS:
-		if DaysLeft[t] == 0:
-			consMinVisits[t] = (
-				model.terminal_visits[t] == 1
-			)
-		else:
-			consMaxVisits[t] = (
-				model.terminal_visits[t] <= 1
-			)			
-	constraints_from_dict(consMinVisits, model, 'consMinVisits')	
-	constraints_from_dict(consMaxVisits, model, 'consMaxVisits')	
+    # Constraints for minimum and maximum visits to terminals
+    cons_min_visits = {}
+    cons_max_visits = {}
+    for t in terminals:
+        if days_left[t] == 0:
+            cons_min_visits[t] = (
+                model.terminal_visits[t] == 1
+            )
+        else:
+            cons_max_visits[t] = (
+                model.terminal_visits[t] <= 1
+            )            
+    constraints_from_dict(cons_min_visits, model, 'cons_min_visits')    
+    constraints_from_dict(cons_max_visits, model, 'cons_max_visits')    
 
-	# Количество маршрутов за день меньше количества броневиков
-	consMaxRoutes = {}
-	consMaxRoutes['cars_count'] = (
-		cars_count >= sum(model.route_use[r] for r in ROUTES)
-	)	
-	constraints_from_dict(consMaxRoutes, model, 'consMaxRoutes')	
+     # Constraint to limit the number of routes per day to the number of available cars
+    cons_max_routes = {}
+    cons_max_routes['cars_count'] = (
+        cars_count >= sum(model.route_use[r] for r in routes)
+    )    
+    constraints_from_dict(cons_max_routes, model, 'cons_max_routes')    
 
+    # Objective function: maximize the sum of terminal visits weighted by days left
+    model.obj = Objective(expr = (
+        sum(model.terminal_visits[t] * WEIGHTS[days_left[t]] for t in terminals if days_left[t] > 0)
+    ), sense = maximize)
 
-	## Целевая функция:
-
-	model.obj = Objective(expr = (
-		sum(model.terminal_visits[t] * Weights[DaysLeft[t]] for t in TERMINALS if DaysLeft[t] > 0)
-	), sense = maximize)
-
-	return model
+    return model
 

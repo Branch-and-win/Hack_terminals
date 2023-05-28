@@ -1,0 +1,12 @@
+balance_percent: 0.02
+max_days: 14
+maintenance_percent: 0.0001
+car_cost: 20000
+max_cash: 1000000
+maintenance_minutes: 10
+max_days: 14
+start_hour: 8
+end_hour: 20
+start_date: 2022-09-01
+end_date: 2022-11-30
+num_cars: 8
