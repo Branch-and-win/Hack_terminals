@@ -46,8 +46,8 @@ def create_data(params, forecast_mode):
 
     # Load start balance data
     balance_data = pd.read_excel(
-        './input/terminal_data_hackathon v4.xlsx',sheet_name='Start_balance', index_col=[0])
-    start_balance = balance_data['start_balance'].to_dict()
+        './input/terminal_data_hackathon v4.xlsx',sheet_name='Incomes', index_col=[0])
+    start_balance = balance_data['остаток на 31.08.2022 (входящий)'].to_dict()
     data['start_balance'] = start_balance
 
     # Load forecasted income data
@@ -108,7 +108,7 @@ def update_data(data, model, current_date, params, forecast_mode):
     last_visit = data['last_visit']
     forecast_income = data['forecast_income']
 
-    # Calculate days left based on cash balance and prev days_left
+    # Calculate days left based on prev cash balance and prev days_left
     running_balance = {}
     for t in terminals:
         if value(model.terminal_visits[t] > 0.5):

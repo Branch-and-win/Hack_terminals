@@ -26,7 +26,7 @@ def main():
 
     # Create initial data
     data = create_data(params, forecast_mode=True)
-    routes_count = 1000
+    routes_count = 5000
     k = 1
 
     for d in pd.date_range(start=params['start_date'], end=params['end_date']).tolist():

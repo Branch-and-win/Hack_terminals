@@ -4,23 +4,6 @@ from datetime import timedelta
 from math import *
 
 
-WEIGHTS = {
-    1:20,
-    2:13,
-    3:12,
-    4:11,
-    5:10,
-    6:9,
-    7:8,
-    8:7,
-    9:6,
-    10:5,
-    11:4,
-    12:3,
-    13:2,
-    14:1
-}
-
 def create_model(data, params, current_date, cars_count):
     """
     Create the optimization model.
@@ -36,12 +19,15 @@ def create_model(data, params, current_date, cars_count):
     """
 
     terminals = data['terminals']
-    start_balance = data['start_balance']
-    cash_income = data['cash_income']
     routes = data['routes']
     terminals_in_route = data['terminals_in_route']
-    last_visit = data['last_visit']
     days_left = data['days_left']
+    
+    # Countes the number of terminals in certain days_left group (1..14)
+    group_count = {i: 0 for i in range(1, params['max_days']+1)}
+    for t in terminals:
+        if days_left[t] > 0:
+            group_count[days_left[t]] += 1
 
     model = ConcreteModel()
 
@@ -60,7 +46,7 @@ def create_model(data, params, current_date, cars_count):
     for t in terminals:
         if days_left[t] == 0:
             cons_min_visits[t] = (
-                model.terminal_visits[t] == 1
+                model.terminal_visits[t] >= 1
             )
         else:
             cons_max_visits[t] = (
@@ -76,9 +62,9 @@ def create_model(data, params, current_date, cars_count):
     )    
     constraints_from_dict(cons_max_routes, model, 'cons_max_routes')    
 
-    # Objective function: maximize the sum of terminal visits weighted by days left
+    # Objective function: maximize the sum of terminal visits weighted by (group_count[days_left[t]] / days_left[t])
     model.obj = Objective(expr = (
-        sum(model.terminal_visits[t] * WEIGHTS[days_left[t]] for t in terminals if days_left[t] > 0)
+        sum(model.terminal_visits[t] * (group_count[days_left[t]] / days_left[t]) for t in terminals if days_left[t] > 0)
     ), sense = maximize)
 
     return model
