@@ -3,6 +3,12 @@ from datetime import timedelta,datetime
 from pyomo.environ import *
 import pickle5 as pickle
 
+import tqdm
+import tqdm
+import logging
+import structlog
+logger = structlog.get_logger('create_data')
+
 def create_data(params, forecast_mode):
     """
     Create initial data for the optimization model.
@@ -18,10 +24,12 @@ def create_data(params, forecast_mode):
     data = {}
 
     # Load terminal data
+    logger.info('Load terminals data')
     terminals = pd.read_excel(
         './input/terminal_data_hackathon v4.xlsx',sheet_name='TIDS')['TID'].tolist()
     
     # Load edge data
+    logger.info('Load edge data')
     edge_data = pd.read_csv(
         './input/times v4.csv', index_col=['Origin_tid','Destination_tid'])
     data['edges'] = list(edge_data.index.values)
@@ -35,6 +43,7 @@ def create_data(params, forecast_mode):
     edge_time = data['edge_time'] 
 
     # Load income data
+    logger.info('Load income data')
     income_data = pd.read_excel(
 		'./input/terminal_data_hackathon v4.xlsx',sheet_name='Incomes')
     income_data = pd.melt(income_data, id_vars=['TID','остаток на 31.08.2022 (входящий)'], var_name='Datetime', value_name='Income')
@@ -47,17 +56,20 @@ def create_data(params, forecast_mode):
     data['cash_income'] = cash_income
 
     # Load start balance data
+    logger.info('Load start balance data')
     balance_data = pd.read_excel(
         './input/terminal_data_hackathon v4.xlsx',sheet_name='Incomes', index_col=[0])
     start_balance = balance_data['остаток на 31.08.2022 (входящий)'].to_dict()
     data['start_balance'] = start_balance
 
     # Load forecasted income data
+    logger.info('Load forecasted income data')
     with open('./input/prognosis_full.pickle', 'rb') as fp:
         forecast_income = pickle.load(fp)
     data['forecast_income'] = forecast_income
 
     # Calculate days left based on prev cash balance and prev days_left
+    logger.info('Days left calculate')
     days_left = {t: params['max_days'] for t in terminals}
     running_balance = {}
     for t in terminals:
@@ -80,13 +92,12 @@ def create_data(params, forecast_mode):
                         running_balance[t] += cash_income[t,d]
 
 	# Generate greedy routes for each terminal as starting point 
+    logger.info('Generate greedy routes')
     special_route = 0
     terminals_in_route = {}
     all_terminals = [t for t in terminals]
-    while len(all_terminals) > 0:
+    for current_terminal in tqdm.tqdm(all_terminals):
         special_route += 1
-        current_terminal = all_terminals[0]
-        all_terminals.remove(current_terminal)
         terminals_in_route[special_route]=[current_terminal]
         cumm_time = params['maintenance_minutes']
         next_terminals = [t for t in terminals if t != current_terminal]

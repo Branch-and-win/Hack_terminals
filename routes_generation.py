@@ -1,5 +1,9 @@
 import random
 
+import logging
+import structlog
+logger = structlog.get_logger('routes_generation')
+
 def generate_routes(data, params):
     """
     Generate random routes based on the input data and parameters.
@@ -20,7 +24,7 @@ def generate_routes(data, params):
 
     # Generate greedy routes between terminals with days_left = 0
     zero_terminals = [t for t in terminals if days_left[t] == 0]
-    print(len(zero_terminals))
+    logger.info(f"{len(zero_terminals)} terminals with days_left = 0")
     special_route_id = len(terminals_in_route)
     while len(zero_terminals) > 0:
         special_route_id += 1
@@ -40,7 +44,7 @@ def generate_routes(data, params):
             else:
                 break
 
-    print(special_route_id - len(terminals))
+    logger.info(f"{special_route_id - len(terminals)} special route(s) generated")
 
     data['routes'] = list(range(1, special_route_id+1))
     data['terminals_in_route'] = terminals_in_route
