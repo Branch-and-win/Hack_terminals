@@ -26,18 +26,16 @@ def main():
 
     # Create initial data
     data = create_data(params, forecast_mode=True)
-    routes_count = 5000
-    k = 1
 
     for d in pd.date_range(start=params['start_date'], end=params['end_date']).tolist():
 
         logger.info(f'Start calc new day {d}')
 
         # Generate routes for the current day
-        generate_routes(data, params, routes_count, d, k)
+        generate_routes(data, params)
 
         # Create optimization model for the current day
-        model = create_model(data, params, d, params['num_cars'])
+        model = create_model(data, params, params['num_cars'])
 
         # Set solver params and solve model
         Solver = SolverFactory('appsi_highs')

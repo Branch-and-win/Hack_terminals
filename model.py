@@ -4,14 +4,13 @@ from datetime import timedelta
 from math import *
 
 
-def create_model(data, params, current_date, cars_count):
+def create_model(data, params, cars_count):
     """
     Create the optimization model.
 
     Args:
         data (dict): Dictionary containing the input data.
         params (dict): Parameters for the optimization model.
-        current_date (datetime): Current date.
         cars_count (int): Number of available cars.
 
     Returns:
@@ -44,11 +43,13 @@ def create_model(data, params, current_date, cars_count):
     cons_min_visits = {}
     cons_max_visits = {}
     for t in terminals:
+        # Mandatory terminals
         if days_left[t] == 0:
             cons_min_visits[t] = (
                 model.terminal_visits[t] >= 1
             )
         else:
+        # Voluntary terminals
             cons_max_visits[t] = (
                 model.terminal_visits[t] <= 1
             )            

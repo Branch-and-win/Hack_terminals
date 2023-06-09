@@ -31,6 +31,8 @@ def create_data(params, forecast_mode):
     for (t1,t2) in data['edges']:
         if data['edge_time'][t1,t2] == 0:
             data['edge_time'][t1,t2] = 0.1
+            
+    edge_time = data['edge_time'] 
 
     # Load income data
     income_data = pd.read_excel(
@@ -55,7 +57,7 @@ def create_data(params, forecast_mode):
         forecast_income = pickle.load(fp)
     data['forecast_income'] = forecast_income
 
-    # Calculate days left based on cash balance
+    # Calculate days left based on prev cash balance and prev days_left
     days_left = {t: params['max_days'] for t in terminals}
     running_balance = {}
     for t in terminals:
@@ -76,6 +78,33 @@ def create_data(params, forecast_mode):
                         break
                     else:
                         running_balance[t] += cash_income[t,d]
+
+	# Generate greedy routes for each terminal as starting point 
+    special_route = 0
+    terminals_in_route = {}
+    all_terminals = [t for t in terminals]
+    while len(all_terminals) > 0:
+        special_route += 1
+        current_terminal = all_terminals[0]
+        all_terminals.remove(current_terminal)
+        terminals_in_route[special_route]=[current_terminal]
+        cumm_time = params['maintenance_minutes']
+        next_terminals = [t for t in terminals if t != current_terminal]
+        # Find available terminals that can be visited next based on time constraints
+        while True:
+            # Select the next nearest terminal 
+            next_terminal = sorted(next_terminals, key=lambda t: edge_time[current_terminal,t])[0]
+            if cumm_time + edge_time[current_terminal,next_terminal] + params['maintenance_minutes'] <= params['shift_minutes']:
+                terminals_in_route[special_route].append(next_terminal)
+                cumm_time += edge_time[current_terminal,next_terminal] + params['maintenance_minutes']
+                current_terminal = next_terminal
+                next_terminals.remove(current_terminal)
+            else:
+                break	
+
+    data['terminals_in_fixed_route'] = terminals_in_route
+    data['days_left'] = days_left
+    data['terminals'] = terminals
 
     data['last_visit'] = {t: 
         params['start_date'] + timedelta(days=-1)

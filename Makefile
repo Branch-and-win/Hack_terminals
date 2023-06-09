@@ -1,4 +1,4 @@
-CONTAINER = station_sat_system
+CONTAINER = terminal_system
 PUSH_TAG = latest
 
 build:
